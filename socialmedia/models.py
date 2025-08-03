@@ -30,9 +30,7 @@ class Post(models.Model):
     )
 
     def __str__(self):
-        return (
-            f"Post: {self.title}, created at: {self.created_at}, author: {self.author}"
-        )
+        return f"Post: {self.title}, created at: {self.created_at}, author: {self.author.username}"
 
 
 def image_path(instance, filename):
@@ -73,7 +71,7 @@ class Comment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Comment created at: {self.created_at} by {self.author}"
+        return f"Comment created at: {self.created_at} by {self.author.username}"
 
     class Meta:
         ordering = ["-created_at"]
@@ -92,7 +90,7 @@ class Like(models.Model):
     )
 
     def __str__(self):
-        return f"{self.user} liked {self.post.title}"
+        return f"{self.user.username} liked {self.post.title}"
 
     class Meta:
         unique_together = ("user", "post")
@@ -112,7 +110,7 @@ class Follow(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.follower} follows {self.following}"
+        return f"{self.follower.username} follows {self.following.username}"
 
     class Meta:
         unique_together = ("follower", "following")
