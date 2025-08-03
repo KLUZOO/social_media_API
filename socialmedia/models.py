@@ -2,6 +2,7 @@ import os
 import uuid
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.text import slugify
 
@@ -115,3 +116,11 @@ class Follow(models.Model):
 
     class Meta:
         unique_together = ("follower", "following")
+
+    def clean(self):
+        if self.follower == self.following:
+            raise ValidationError("You cannot follow yourself.")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
