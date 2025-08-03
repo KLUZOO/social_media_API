@@ -38,13 +38,13 @@ class FollowUserView(APIView):
     serializer_class = FollowSerializer
     permission_classes = (IsAuthenticated,)
 
-    def get_target_user(self, request, user_id):
+    def get_target_user(self, user_id, current_user_id):
         try:
             target_user_id = int(user_id)
         except (TypeError, ValueError):
             raise ValidationError("Invalid user ID")
 
-        if target_user_id == request.user.id:
+        if target_user_id == current_user_id:
             raise ValidationError("You cannot follow yourself.")
 
         User = get_user_model()
@@ -54,7 +54,7 @@ class FollowUserView(APIView):
             raise NotFound("User not found")
 
     def post(self, request, *args, **kwargs):
-        target_user = self.get_target_user(request, kwargs.get("user_id"))
+        target_user = self.get_target_user(kwargs.get("user_id"), request.user.id)
 
         follow, created = Follow.objects.get_or_create(
             follower=request.user, following=target_user
@@ -68,7 +68,7 @@ class FollowUserView(APIView):
         return Response(FollowSerializer(follow).data, status=status.HTTP_201_CREATED)
 
     def get(self, request, *args, **kwargs):
-        target_user = self.get_target_user(request, kwargs.get("user_id"))
+        target_user = self.get_target_user(kwargs.get("user_id"), request.user.id)
 
         try:
             follow = Follow.objects.get(follower=request.user, following=target_user)
@@ -91,6 +91,8 @@ class FollowUserView(APIView):
                 follower=request.user, following__id=target_user_id
             )
             follow.delete()
-            return Response({"detail": "Unfollowed"}, status=204)
+            return Response({"detail": "Unfollowed"}, status=status.HTTP_204_NO_CONTENT)
         except Follow.DoesNotExist:
-            return Response({"detail": "Not following"}, status=400)
+            return Response(
+                {"detail": "Not following"}, status=status.HTTP_400_BAD_REQUEST
+            )
