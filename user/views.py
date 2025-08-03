@@ -1,7 +1,9 @@
 from django.contrib.auth import get_user_model
 from rest_framework import generics, mixins, permissions, status
+from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
@@ -32,31 +34,27 @@ class UsersListView(
     permission_classes = (IsAuthenticated,)
 
 
-class FollowUserView(generics.CreateAPIView):
+class FollowUserView(APIView):
     serializer_class = FollowSerializer
     permission_classes = (IsAuthenticated,)
 
-    def post(self, request, *args, **kwargs):
+    def get_target_user(self, request, user_id):
         try:
-            target_user_id = int(kwargs.get("user_id"))
+            target_user_id = int(user_id)
         except (TypeError, ValueError):
-            return Response(
-                {"detail": "Invalid user ID"}, status=status.HTTP_400_BAD_REQUEST
-            )
+            raise ValidationError("Invalid user ID")
 
         if target_user_id == request.user.id:
-            return Response(
-                {"detail": "Cannot follow yourself"}, status=status.HTTP_400_BAD_REQUEST
-            )
+            raise ValidationError("You cannot follow yourself.")
 
         User = get_user_model()
-
         try:
-            target_user = User.objects.get(id=target_user_id)
+            return User.objects.get(id=target_user_id)
         except User.DoesNotExist:
-            return Response(
-                {"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            raise NotFound("User not found")
+
+    def post(self, request, *args, **kwargs):
+        target_user = self.get_target_user(request, kwargs.get("user_id"))
 
         follow, created = Follow.objects.get_or_create(
             follower=request.user, following=target_user
@@ -69,9 +67,22 @@ class FollowUserView(generics.CreateAPIView):
 
         return Response(FollowSerializer(follow).data, status=status.HTTP_201_CREATED)
 
+    def get(self, request, *args, **kwargs):
+        target_user = self.get_target_user(request, kwargs.get("user_id"))
 
-class UnfollowUserView(generics.DestroyAPIView):
-    permission_classes = (IsAuthenticated,)
+        try:
+            follow = Follow.objects.get(follower=request.user, following=target_user)
+            return Response(
+                {
+                    "detail": f"You've followed {target_user.username} at {follow.created_at}"
+                },
+                status=status.HTTP_200_OK,
+            )
+        except Follow.DoesNotExist:
+            return Response(
+                {"detail": f"You can follow {target_user.username}"},
+                status=status.HTTP_200_OK,
+            )
 
     def delete(self, request, *args, **kwargs):
         target_user_id = kwargs.get("user_id")
