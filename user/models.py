@@ -9,6 +9,8 @@ from django.db import models
 from django.utils.text import slugify
 from django.utils.translation import gettext as _
 
+from socialmedia.models import Post
+
 
 class UserManager(BaseUserManager):
     """Define a model manager for User model with no username field."""
@@ -61,3 +63,11 @@ class User(AbstractUser):
     REQUIRED_FIELDS = []
 
     objects = UserManager()
+
+    @property
+    def total_posts(self):
+        return Post.objects.filter(author=self).count()
+
+    @property
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}"
