@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from social_media_api.permissions import IsAuthorOrReadOnly
-from socialmedia.models import Post, PostImage, Comment
+from socialmedia.models import Post, PostImage, Comment, Like
 from socialmedia.serializers import (
     PostListSerializer,
     PostCreateSerializer,
@@ -39,6 +39,37 @@ class PostViewSet(viewsets.ModelViewSet):
             serializer.save(author=request.user, post=post)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
+    def like(self, request, pk=None):
+        post = self.get_object()
+        like, created = Like.objects.get_or_create(post=post, user=request.user)
+
+        if not created:
+            return Response(
+                {"detail": "You have already liked this post."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(
+            {"detail": "Post liked successfully."},
+            status=status.HTTP_201_CREATED,
+        )
+
+    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
+    def unlike(self, request, pk=None):
+        post = self.get_object()
+        try:
+            like = Like.objects.get(post=post, user=request.user)
+            like.delete()
+            return Response(
+                {"detail": "Like removed successfully."},
+                status=status.HTTP_204_NO_CONTENT,
+            )
+        except Like.DoesNotExist:
+            return Response(
+                {"detail": "You have not liked this post."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 class CommentDeleteViewSet(viewsets.GenericViewSet, mixins.DestroyModelMixin):
