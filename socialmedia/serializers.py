@@ -16,6 +16,17 @@ class TagSerializer(serializers.ModelSerializer):
         fields = ("id", "name")
 
 
+class CommentSerializer(serializers.ModelSerializer):
+    author = serializers.SlugRelatedField(
+        read_only=True,
+        slug_field="username",
+    )
+
+    class Meta:
+        model = Comment
+        fields = ("author", "content", "created_at")
+
+
 class PostListSerializer(serializers.ModelSerializer):
     tags = serializers.SerializerMethodField(read_only=True)
     images = serializers.SerializerMethodField(read_only=True)
@@ -47,6 +58,25 @@ class PostListSerializer(serializers.ModelSerializer):
                     url = request.build_absolute_uri(url)
                 urls.append(url)
         return urls
+
+
+class PostRetrieveSerializer(PostListSerializer):
+    comments = CommentSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Post
+        fields = (
+            "id",
+            "title",
+            "content",
+            "tags",
+            "created_at",
+            "images",
+            "total_comments",
+            "total_likes",
+            "comments",
+        )
+        read_only_fields = ("id", "created_at", "images")
 
 
 class PostCreateSerializer(serializers.ModelSerializer):

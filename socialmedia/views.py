@@ -8,6 +8,7 @@ from socialmedia.serializers import (
     PostListSerializer,
     PostCreateSerializer,
     PostImageSerializer,
+    PostRetrieveSerializer,
 )
 
 
@@ -16,8 +17,10 @@ class PostViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated, IsAuthorOrReadOnly)
 
     def get_serializer_class(self):
-        if self.action in ("list", "retrieve"):
+        if self.action == "list":
             return PostListSerializer
+        elif self.action == "retrieve":
+            return PostRetrieveSerializer
         return PostCreateSerializer
 
     def perform_create(self, serializer):
