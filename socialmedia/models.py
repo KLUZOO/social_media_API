@@ -32,6 +32,14 @@ class Post(models.Model):
     def __str__(self):
         return f"Post: {self.title}, created at: {self.created_at}, author: {self.author.username}"
 
+    @property
+    def total_comments(self):
+        return self.comments.all().count()
+
+    @property
+    def total_likes(self):
+        return self.likes.all().count()
+
 
 def image_path(instance, filename):
     _, extension = os.path.splitext(filename)

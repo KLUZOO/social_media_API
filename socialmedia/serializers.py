@@ -22,7 +22,16 @@ class PostListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Post
-        fields = ("id", "title", "content", "tags", "created_at", "images")
+        fields = (
+            "id",
+            "title",
+            "content",
+            "tags",
+            "created_at",
+            "images",
+            "total_comments",
+            "total_likes",
+        )
         read_only_fields = ("id", "created_at", "images")
 
     def get_tags(self, obj):
