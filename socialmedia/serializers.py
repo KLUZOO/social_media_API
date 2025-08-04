@@ -8,6 +8,7 @@ from socialmedia.models import (
     Tag,
     Comment,
 )
+from user.models import User
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -27,9 +28,16 @@ class CommentSerializer(serializers.ModelSerializer):
         fields = ("id", "author", "content", "created_at")
 
 
+class AuthorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ("id", "username", "full_name")
+
+
 class PostListSerializer(serializers.ModelSerializer):
     tags = serializers.SerializerMethodField(read_only=True)
     images = serializers.SerializerMethodField(read_only=True)
+    created_by = AuthorSerializer(read_only=True, many=False, source="author")
 
     class Meta:
         model = Post
@@ -39,11 +47,19 @@ class PostListSerializer(serializers.ModelSerializer):
             "content",
             "tags",
             "created_at",
+            "created_by",
             "images",
             "total_comments",
             "total_likes",
         )
-        read_only_fields = ("id", "created_at", "images")
+        read_only_fields = (
+            "id",
+            "created_at",
+            "images",
+            "total_comments",
+            "total_likes",
+            "created_by",
+        )
 
     def get_tags(self, obj):
         return [tag.name for tag in obj.tags.all()]
