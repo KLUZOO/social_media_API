@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.db.models import Q
 from rest_framework import generics, mixins, permissions, status
 from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework.permissions import IsAuthenticated
@@ -29,9 +30,46 @@ class UsersListView(
     mixins.ListModelMixin,
     GenericViewSet,
 ):
-    queryset = get_user_model().objects.all()
     serializer_class = UserListSerializer
     permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        queryset = get_user_model().objects.all()
+        follower = self.request.query_params.get("follower")
+        following = self.request.query_params.get("following")
+        username = self.request.query_params.get("username")
+        first_name = self.request.query_params.get("first_name")
+        last_name = self.request.query_params.get("last_name")
+        search = self.request.query_params.get("search")
+
+        if follower == "true":
+            queryset = queryset.filter(followers__follower=self.request.user.id)
+        elif follower == "false":
+            queryset = queryset.exclude(followers__follower=self.request.user.id)
+
+        if following == "true":
+            queryset = queryset.filter(following__following=self.request.user.id)
+        elif following == "false":
+            queryset = queryset.exclude(following__following=self.request.user.id)
+
+        if username:
+            queryset = queryset.filter(username__icontains=username)
+
+        if first_name:
+            queryset = queryset.filter(first_name__icontains=first_name)
+
+        if last_name:
+            queryset = queryset.filter(last_name__icontains=last_name)
+
+        if search:
+            queryset = queryset.filter(
+                Q(username__icontains=search)
+                | Q(first_name__icontains=search)
+                | Q(last_name__icontains=search)
+                | Q(bio__icontains=search)
+            )
+
+        return queryset
 
 
 class FollowUserView(APIView):
