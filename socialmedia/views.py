@@ -16,7 +16,10 @@ from socialmedia.serializers import (
     PostImageSerializer,
     PostRetrieveSerializer,
     CommentSerializer,
+    ScheduledPostSerializer,
 )
+from django.utils.timezone import now
+from .tasks import create_scheduled_post
 
 
 class PostViewSet(viewsets.ModelViewSet):
@@ -82,6 +85,8 @@ class PostViewSet(viewsets.ModelViewSet):
             return PostRetrieveSerializer
         elif self.action == "comment":
             return CommentSerializer
+        elif self.action == "scheduled_post":
+            return ScheduledPostSerializer
         return PostCreateSerializer
 
     def perform_create(self, serializer):
@@ -126,6 +131,40 @@ class PostViewSet(viewsets.ModelViewSet):
                 {"detail": "You have not liked this post."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="schedule",
+        permission_classes=[IsAuthenticated],
+    )
+    def schedule_post(self, request):
+        serializer = ScheduledPostSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        data = serializer.validated_data
+        schedule_time = data["scheduled_time"]
+        delay = (schedule_time - now()).total_seconds()
+
+        if delay <= 0:
+            return Response(
+                {"detail": "scheduled_time must be in the future"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        create_scheduled_post.apply_async(
+            args=[
+                request.user.id,
+                data["title"],
+                data["content"],
+                data.get("tags", []),
+            ],
+            countdown=delay,
+        )
+
+        return Response(
+            {"detail": "Post scheduled successfully"}, status=status.HTTP_202_ACCEPTED
+        )
 
 
 class CommentDeleteViewSet(viewsets.GenericViewSet, mixins.DestroyModelMixin):

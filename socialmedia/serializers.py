@@ -95,6 +95,13 @@ class PostRetrieveSerializer(PostListSerializer):
         read_only_fields = ("id", "created_at", "images")
 
 
+class ScheduledPostSerializer(serializers.Serializer):
+    title = serializers.CharField()
+    content = serializers.CharField()
+    tags = serializers.ListField(child=serializers.CharField(), required=False)
+    scheduled_time = serializers.DateTimeField()
+
+
 class PostCreateSerializer(serializers.ModelSerializer):
     tags = serializers.ListField(
         child=serializers.CharField(), write_only=True, required=False
