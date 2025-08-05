@@ -18,7 +18,7 @@ A RESTful API for a basic social media platform built with Django and Django RES
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/your-username/social-media-api.git
+git clone https://github.com/KLUZOO/social_media_API.git
 cd social-media-api
 ```
 
