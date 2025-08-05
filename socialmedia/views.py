@@ -2,6 +2,7 @@ from datetime import datetime
 
 from django.db.models import Q
 from django.utils.dateparse import parse_datetime
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
 from rest_framework import viewsets, status, mixins
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
@@ -92,6 +93,11 @@ class PostViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
+    @extend_schema(
+        description="Add a comment to the specified post.",
+        request=CommentSerializer,
+        responses={201: CommentSerializer},
+    )
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
     def comment(self, request, pk=None):
         post = self.get_object()
@@ -101,6 +107,13 @@ class PostViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @extend_schema(
+        description="Like the specified post.",
+        responses={
+            201: OpenApiResponse(description="Post liked successfully."),
+            400: OpenApiResponse(description="Already liked"),
+        },
+    )
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
     def like(self, request, pk=None):
         post = self.get_object()
@@ -116,6 +129,13 @@ class PostViewSet(viewsets.ModelViewSet):
             status=status.HTTP_201_CREATED,
         )
 
+    @extend_schema(
+        description="Remove like from the specified post.",
+        responses={
+            204: OpenApiResponse(description="Like removed successfully."),
+            400: OpenApiResponse(description="Not liked yet"),
+        },
+    )
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
     def unlike(self, request, pk=None):
         post = self.get_object()
@@ -132,6 +152,14 @@ class PostViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+    @extend_schema(
+        description="Schedule a post to be created in the future.",
+        request=ScheduledPostSerializer,
+        responses={
+            202: OpenApiResponse(description="Post scheduled successfully"),
+            400: OpenApiResponse(description="Invalid or past datetime"),
+        },
+    )
     @action(
         detail=False,
         methods=["post"],
@@ -165,6 +193,61 @@ class PostViewSet(viewsets.ModelViewSet):
         return Response(
             {"detail": "Post scheduled successfully"}, status=status.HTTP_202_ACCEPTED
         )
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="title",
+                description="Filter by post title",
+                required=False,
+                type=str,
+            ),
+            OpenApiParameter(
+                name="content",
+                description="Filter by post content",
+                required=False,
+                type=str,
+            ),
+            OpenApiParameter(
+                name="author",
+                description="Search by author's username, first name, or last name",
+                required=False,
+                type=str,
+            ),
+            OpenApiParameter(
+                name="created_after",
+                description="Filter posts created after this datetime (ISO format)",
+                required=False,
+                type=str,
+            ),
+            OpenApiParameter(
+                name="created_before",
+                description="Filter posts created before this datetime (ISO format)",
+                required=False,
+                type=str,
+            ),
+            OpenApiParameter(
+                name="follower",
+                description="'true' to filter authors you follow, 'false' to exclude them",
+                required=False,
+                type=str,
+            ),
+            OpenApiParameter(
+                name="following",
+                description="'true' to filter authors who follow you, 'false' to exclude them",
+                required=False,
+                type=str,
+            ),
+            OpenApiParameter(
+                name="tags",
+                description="Comma-separated list of tag names to filter by",
+                required=False,
+                type=str,
+            ),
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
 
 class CommentDeleteViewSet(viewsets.GenericViewSet, mixins.DestroyModelMixin):
